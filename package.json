@@ -1,0 +1,32 @@
+{
+  "name": "google-health-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Google Health (Fitbit) sleep and recovery data, hosted on AWS Lambda",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "build:lambda": "node scripts/build-lambda.mjs",
+    "admin": "node scripts/admin.mjs",
+    "deploy": "npm run build:lambda && sam deploy"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "serverless-http": "^4.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-lambda": "^3.1141.0",
+    "@aws-sdk/client-ssm": "^3.1141.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.15",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}

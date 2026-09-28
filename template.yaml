@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Google Health (Fitbit) MCP server for claude.ai custom connectors; each person signs in with their own Google account
+
+Parameters:
+  SsmPrefix:
+    Type: String
+    Default: /google-health-mcp
+    AllowedPattern: ^/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$
+    Description: SSM Parameter Store path holding the settings (managed with npm run admin)
+  RedirectUris:
+    Type: String
+    Default: https://claude.ai/api/mcp/auth_callback
+    Description: Comma-separated OAuth redirect URIs that clients may register
+
+Resources:
+  McpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: google-health-mcp
+      # Built by npm run build:lambda; sam deploy zips this folder as-is (no sam build)
+      CodeUri: dist-lambda/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 60
+      Environment:
+        Variables:
+          SSM_PREFIX: !Ref SsmPrefix
+          OAUTH_REDIRECT_URIS: !Ref RedirectUris
+          NODE_ENV: production
+          NODE_OPTIONS: --enable-source-maps
+      # Public URL; every route except OAuth discovery and the Google sign-in callback requires a token.
+      # SAM adds both resource-policy statements (InvokeFunctionUrl and InvokeFunction) for this.
+      FunctionUrlConfig:
+        AuthType: NONE
+      LoggingConfig:
+        LogGroup: !Ref McpLogGroup
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: ssm:GetParameters
+              Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SsmPrefix}/*
+
+  McpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/google-health-mcp
+      RetentionInDays: 14
+
+Outputs:
+  McpServerUrl:
+    Description: Paste into claude.ai > Settings > Connectors > Add custom connector
+    Value: !Sub ${McpFunctionUrl.FunctionUrl}mcp
+  GoogleRedirectUri:
+    Description: Add to the Google OAuth client's authorized redirect URIs
+    Value: !Sub ${McpFunctionUrl.FunctionUrl}oauth/callback
